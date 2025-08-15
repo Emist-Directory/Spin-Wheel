@@ -1,33 +1,25 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spin Wheel</title>
-  <link rel="stylesheet" href="./style.css" />
-  <script src="./app.js" defer></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <div class="card">
-      <h1>Spin Wheel</h1>
-      <div class="wheel-wrap">
-        <div class="pointer"></div>
-        <canvas id="wheel" width="600" height="600" aria-label="Spin wheel"></canvas>
-      </div>
-      <div class="row" style="margin-top:12px">
-        <button id="spinBtn" type="button">SPIN</button>
-      </div>
+  <div class="card">
+    <canvas id="wheel" width="500" height="500"></canvas>
+    <button id="spinBtn">SPIN</button>
+  </div>
+
+  <!-- Modal hasil -->
+  <div id="resultModal" class="modal hidden">
+    <div class="modal-content">
+      <h2 id="resultText"></h2>
+      <button id="continueBtn">Continue</button>
     </div>
   </div>
 
-  <!-- MODAL HASIL -->
-  <div id="resultModal" class="modal" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
-      <div id="resultTitle" class="modal-title">Hasil</div>
-      <div id="resultText" class="result-text">—</div>
-      <button id="continueBtn" type="button" class="btn">Continue</button>
-    </div>
-  </div>
+  <script src="script.js"></script>
 </body>
 </html>
