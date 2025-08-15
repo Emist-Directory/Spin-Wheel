@@ -168,26 +168,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---------- Modal helpers (dengan fallback alert) ----------
   function showResult(text){
-    const color = colorFor(text, 0);
-    if (modal && resultText && continueBtn) {
-      resultText.textContent = text;
-      resultText.style.color = color; // warnai sesuai hadiah
-      modal.classList.add("show");
-      modal.setAttribute("aria-hidden", "false");
-      continueBtn.focus();
-    } else {
-      alert(text);
-    }
+  const color = colorFor(text, 0);
+  if (modal && resultText && continueBtn) {
+    resultText.textContent = text;
+    resultText.style.color = color;        // warnai sesuai hadiah
+    modal.classList.remove("hidden");      // <-- tampilkan modal
+    modal.setAttribute("aria-hidden", "false");
+    continueBtn.focus();
+  } else {
+    alert(text);
   }
-  function hideModal(){
-    if (!modal) return;
-    modal.classList.remove("show");
-    modal.setAttribute("aria-hidden", "true");
-    spinBtn.focus();
-  }
-  if (continueBtn) continueBtn.addEventListener("click", hideModal);
-  if (modal) modal.addEventListener("click", (e) => { if (e.target === modal) hideModal(); });
-  window.addEventListener("keydown", (e) => { if (e.key === "Escape") hideModal(); });
+}
+
+function hideModal(){
+  if (!modal) return;
+  modal.classList.add("hidden");           // <-- sembunyikan modal
+  modal.setAttribute("aria-hidden", "true");
+  spinBtn.focus();
+}
+
+if (continueBtn) continueBtn.addEventListener("click", hideModal);
+if (modal) modal.addEventListener("click", (e) => { if (e.target === modal) hideModal(); });
+window.addEventListener("keydown", (e) => { if (e.key === "Escape") hideModal(); });
 
   // ---------- Animasi spin ----------
   function spin() {
