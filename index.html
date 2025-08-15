@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spin Wheel </title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- defer memastikan JS jalan setelah DOM siap -->
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h1>Spin Wheel</h1>
+      <div class="wheel-wrap">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="600" height="600" aria-label="Spin wheel"></canvas>
+      </div>
+      <div class="row" style="margin-top:12px">
+        <button id="spinBtn" type="button">SPIN</button>
+      </div>
+    </div>
+  </div>
+  <noscript>Harap aktifkan JavaScript untuk menjalankan roda.</noscript>
+</body>
+</html>
