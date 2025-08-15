@@ -1,24 +1,24 @@
-/* Spin Wheel – distribusi terkontrol:
- * ZONK 85%, PERMEN 7%, SNACK 5%, OTHER 2.5%, DOORPRIZE 0.5%
- * Catatan: "PERMEN" mencakup label yang mengandung kata PERMEN (termasuk "+1 PERMEN")
+/* Spin Wheel – distribusi:
+ * ZONK 85%, PERMEN 7%, SNACK 6%, KEYCHAIN+LANYARD 1.5%, DOORPRIZE 0.5%
+ * Hanya tombol SPIN + roda; pop-up hasil + tombol Continue (fallback ke alert).
  */
 document.addEventListener("DOMContentLoaded", () => {
-  // ---------- 18 slice; 5 ZONK; DOORPRIZE ganti salah satu SPECIAL SPIN; Keychain tetap ----------
+  // ---------- 18 slice; 5 ZONK; tanpa "+1 PERMEN"; semua SPECIAL SPIN -> DOORPRIZE ----------
   const entries = [
-    "ZONK", "Lanyard", "DOORPRIZE",   // <- ganti SPECIAL SPIN jadi DOORPRIZE
-    "PERMEN", "SNACK", "ZONK", "Keychain",         // <- Keychain tetap
+    "ZONK", "PERMEN", "Lanyard", "DOORPRIZE",
+    "PERMEN", "SNACK", "ZONK", "Keychain",
     "DOORPRIZE", "SNACK", "PERMEN", "DOORPRIZE",
-    "ZONK", "DOORPRIZE", "ZONK",
+    "ZONK", "PERMEN", "DOORPRIZE", "ZONK",
     "SNACK", "ZONK"
   ];
 
   const palette = {
-    ZONK: "#ef4444",
-    PERMEN: "#f59e0b",
-    SNACK: "#3b82f6",
-    DOORPRIZE: "#eab308",
-    Keychain: "#facc15",
-    Lanyard: "#f59e0b",
+    ZONK: "#ef4444",        // merah
+    DOORPRIZE: "#eab308",   // emas
+    PERMEN: "#ec4899",      // pink
+    SNACK: "#3b82f6",       // biru
+    Lanyard: "#f97316",     // oranye
+    Keychain: "#c4b5fd"     // ungu muda
   };
 
   // ---------- DOM ----------
@@ -27,9 +27,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const modal = document.getElementById("resultModal");
   const resultText = document.getElementById("resultText");
   const continueBtn = document.getElementById("continueBtn");
-  if (!canvas || !spinBtn || !modal || !resultText || !continueBtn) {
-    console.error("Missing required DOM nodes"); return;
-  }
+
+  if (!canvas || !spinBtn) { console.error("Missing #wheel or #spinBtn"); return; }
   const ctx = canvas.getContext("2d");
 
   // ---------- State ----------
@@ -43,10 +42,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const normalize = (a) => (a % TAU + TAU) % TAU;
 
   function colorFor(label, i) {
-    for (const key of Object.keys(palette)) {
-      if (label.toUpperCase().includes(key.replace("+1 ", "").toUpperCase()))
-        return palette[key];
-    }
+    const L = label.toUpperCase();
+    if (L.includes("ZONK")) return palette.ZONK;
+    if (L.includes("DOORPRIZE")) return palette.DOORPRIZE;
+    if (L.includes("PERMEN")) return palette.PERMEN;
+    if (L.includes("SNACK")) return palette.SNACK;
+    if (L.includes("LANYARD")) return palette.Lanyard;
+    if (L.includes("KEYCHAIN")) return palette.Keychain;
+    // fallback: gradasi
     const hue = Math.floor((i / n) * 360);
     return `hsl(${hue} 80% 55%)`;
   }
@@ -57,8 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
     for (const w of words) {
       const test = (line ? line + " " : "") + w;
       const m = ctx.measureText(test);
-      if (m.width > maxWidth && line) { lines.push(line); line = w; }
-      else { line = test; }
+      if (m.width > maxWidth && line) { lines.push(line); line = w; } else { line = test; }
     }
     if (line) lines.push(line);
     const total = lines.length * lineHeight;
@@ -115,59 +117,76 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.restore();
   }
 
-  // ---------- Probabilitas kategori spesifik ----------
-  // Kumulatif: ZONK 0.85, PERMEN 0.92, SNACK 0.97, DOORPRIZE 0.975, OTHER 1.0
+  // ---------- Probabilitas spesifik ----------
+  // Kumulatif:
+  // ZONK 0.85, PERMEN 0.92, SNACK 0.98, KEY+LANY 0.995, DOORPRIZE 1.0
   function pickIndexBiased() {
-    const groups = { ZONK: [], PERMEN: [], SNACK: [], DOORPRIZE: [], OTHER: [] };
+    const groups = { ZONK: [], PERMEN: [], SNACK: [], KEYCHAIN: [], LANYARD: [], DOORPRIZE: [] };
 
     for (let i = 0; i < n; i++) {
-      const label = entries[i].toUpperCase();
-      if (label.includes("ZONK")) groups.ZONK.push(i);
-      else if (label.includes("PERMEN")) groups.PERMEN.push(i); // termasuk "+1 PERMEN"
-      else if (label.includes("SNACK")) groups.SNACK.push(i);
-      else if (label.includes("DOORPRIZE")) groups.DOORPRIZE.push(i);
-      else groups.OTHER.push(i); // SPECIAL SPIN, Lanyard, Keychain, dll
+      const L = entries[i].toUpperCase();
+      if (L.includes("ZONK")) groups.ZONK.push(i);
+      else if (L.includes("PERMEN")) groups.PERMEN.push(i);
+      else if (L.includes("SNACK")) groups.SNACK.push(i);
+      else if (L.includes("KEYCHAIN")) groups.KEYCHAIN.push(i);
+      else if (L.includes("LANYARD")) groups.LANYARD.push(i);
+      else if (L.includes("DOORPRIZE")) groups.DOORPRIZE.push(i);
     }
 
     const thresholds = [
-      ["ZONK", 0.85],
-      ["PERMEN", 0.92],      // +7%
-      ["SNACK", 0.97],       // +5%
-      ["DOORPRIZE", 0.975],  // +0.5%
-      ["OTHER", 1.0]         // sisa 2.5%
+      ["ZONK", 0.85],       // 85%
+      ["PERMEN", 0.92],     // +7%  = 92%
+      ["SNACK", 0.98],      // +6%  = 98%
+      ["KEY_LANY", 0.995],  // +1.5%= 99.5%
+      ["DOORPRIZE", 1.0]    // +0.5%= 100%
     ];
 
     const r = Math.random();
-    let chosen = "OTHER";
-    for (const [name, t] of thresholds) {
-      if (r < t) { chosen = name; break; }
-    }
+    let chosen = "DOORPRIZE"; // default akhir
+    for (const [name, t] of thresholds) { if (r < t) { chosen = name; break; } }
 
-    let bag = groups[chosen];
-    if (!bag.length) {
-      bag = groups.ZONK.length ? groups.ZONK :
-            groups.PERMEN.length ? groups.PERMEN :
-            groups.SNACK.length ? groups.SNACK :
-            groups.DOORPRIZE.length ? groups.DOORPRIZE :
-            groups.OTHER;
+    let bag;
+    if (chosen === "KEY_LANY") {
+      const keyOrLany = [...groups.KEYCHAIN, ...groups.LANYARD];
+      bag = keyOrLany;
+      if (!bag.length) bag = groups.ZONK.length ? groups.ZONK : groups.PERMEN.length ? groups.PERMEN :
+                             groups.SNACK.length ? groups.SNACK : groups.DOORPRIZE.length ? groups.DOORPRIZE :
+                             [];
+    } else {
+      bag = groups[chosen] || [];
+      if (!bag.length) {
+        // fallback urutan wajar jika kategori kosong di roda
+        bag = groups.ZONK.length ? groups.ZONK :
+              groups.PERMEN.length ? groups.PERMEN :
+              groups.SNACK.length ? groups.SNACK :
+              [...groups.KEYCHAIN, ...groups.LANYARD].length ? [...groups.KEYCHAIN, ...groups.LANYARD] :
+              groups.DOORPRIZE;
+      }
     }
     return bag[Math.floor(Math.random() * bag.length)];
   }
 
-  // ---------- Modal helpers ----------
-  function showModal(text){
-    resultText.textContent = text;
-    modal.classList.add("show");
-    modal.setAttribute("aria-hidden", "false");
-    continueBtn.focus();
+  // ---------- Modal helpers (dengan fallback alert) ----------
+  function showResult(text){
+    const color = colorFor(text, 0);
+    if (modal && resultText && continueBtn) {
+      resultText.textContent = text;
+      resultText.style.color = color; // warnai sesuai hadiah
+      modal.classList.add("show");
+      modal.setAttribute("aria-hidden", "false");
+      continueBtn.focus();
+    } else {
+      alert(text);
+    }
   }
   function hideModal(){
+    if (!modal) return;
     modal.classList.remove("show");
     modal.setAttribute("aria-hidden", "true");
     spinBtn.focus();
   }
-  continueBtn.addEventListener("click", hideModal);
-  modal.addEventListener("click", (e) => { if (e.target === modal) hideModal(); });
+  if (continueBtn) continueBtn.addEventListener("click", hideModal);
+  if (modal) modal.addEventListener("click", (e) => { if (e.target === modal) hideModal(); });
   window.addEventListener("keydown", (e) => { if (e.key === "Escape") hideModal(); });
 
   // ---------- Animasi spin ----------
@@ -194,7 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
       else {
         spinning = false;
         spinBtn.disabled = false;
-        showModal(entries[selected]); // tampilkan pop-up hasil
+        showResult(entries[selected]);
       }
     }
     requestAnimationFrame(frame);
@@ -204,7 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
   spinBtn.addEventListener("click", spin);
   drawWheel();
 
-  // responsive sizing
   function resize() {
     const card = document.querySelector(".card");
     const size = Math.min(card.clientWidth - 36, 600);
@@ -216,18 +234,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // (opsional) tes distribusi di console
   (function runTests(){
-    const counts = { ZONK:0, PERMEN:0, SNACK:0, DOORPRIZE:0, OTHER:0 };
-    const trials = 10000;
+    const counts = { ZONK:0, PERMEN:0, SNACK:0, KEYCHAIN:0, LANYARD:0, DOORPRIZE:0 };
+    const trials = 12000;
     for (let i=0;i<trials;i++){
       const idx = pickIndexBiased();
       const L = entries[idx].toUpperCase();
       if (L.includes("ZONK")) counts.ZONK++;
       else if (L.includes("PERMEN")) counts.PERMEN++;
       else if (L.includes("SNACK")) counts.SNACK++;
+      else if (L.includes("KEYCHAIN")) counts.KEYCHAIN++;
+      else if (L.includes("LANYARD")) counts.LANYARD++;
       else if (L.includes("DOORPRIZE")) counts.DOORPRIZE++;
-      else counts.OTHER++;
     }
     const pct = Object.fromEntries(Object.entries(counts).map(([k,v])=>[k,(v/trials*100)]));
-    console.info("[tests] approx %", Object.fromEntries(Object.entries(pct).map(([k,v])=>[k, v.toFixed(2)])));
+    const keyLany = pct.KEYCHAIN + pct.LANYARD;
+    console.info("[tests] approx %", Object.fromEntries(Object.entries(pct).map(([k,v])=>[k, v.toFixed(2)])), "KEY+LANY:", keyLany.toFixed(2));
+    // (opsional) assert toleransi:
+    // Zonk ±2%, Permen ±2%, Snack ±1.5%, Key+Lany ±1%, Doorprize ±0.8%
   })();
 });
