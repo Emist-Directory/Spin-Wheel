@@ -3,10 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Spin Wheel </title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- defer memastikan JS jalan setelah DOM siap -->
-  <script src="app.js" defer></script>
+  <title>Spin Wheel</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script src="./app.js" defer></script>
 </head>
 <body>
   <div class="container">
@@ -21,6 +20,14 @@
       </div>
     </div>
   </div>
-  <noscript>Harap aktifkan JavaScript untuk menjalankan roda.</noscript>
+
+  <!-- MODAL HASIL -->
+  <div id="resultModal" class="modal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <div id="resultTitle" class="modal-title">Hasil</div>
+      <div id="resultText" class="result-text">—</div>
+      <button id="continueBtn" type="button" class="btn">Continue</button>
+    </div>
+  </div>
 </body>
 </html>
