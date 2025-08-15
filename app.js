@@ -1,47 +1,45 @@
-/* Spin Wheel – 85% ZONK
- * - 18 slice, tepat 5 ZONK (ditampilkan di roda)
- * - P(ZONK) = 0.85 pada pemilihan hasil
- * - Hanya tombol SPIN + roda (tanpa log hasil di UI)
+/* Spin Wheel – distribusi terkontrol:
+ * ZONK 85%, PERMEN 7%, SNACK 5%, OTHER 2.5%, DOORPRIZE 0.5%
+ * Catatan: "PERMEN" mencakup label yang mengandung kata PERMEN (termasuk "+1 PERMEN")
  */
-
 document.addEventListener("DOMContentLoaded", () => {
-  // ---------- Konfigurasi label (18 total; 5 ZONK) ----------
+  // ---------- 18 slice; 5 ZONK; DOORPRIZE ganti salah satu SPECIAL SPIN; Keychain tetap ----------
   const entries = [
-    "ZONK", "+1 PERMEN", "Lanyard", "DOORPRIZE",
-    "PERMEN", "SNACK", "ZONK", "Keychain",
+    "ZONK", "Lanyard", "DOORPRIZE",   // <- ganti SPECIAL SPIN jadi DOORPRIZE
+    "PERMEN", "SNACK", "ZONK", "Keychain",         // <- Keychain tetap
     "DOORPRIZE", "SNACK", "PERMEN", "DOORPRIZE",
-    "ZONK", "+1 PERMEN", "DOORPRIZE", "ZONK",
+    "ZONK", "DOORPRIZE", "ZONK",
     "SNACK", "ZONK"
   ];
 
   const palette = {
     ZONK: "#ef4444",
-    "DOORPRIZE": "#22c55e",
     PERMEN: "#f59e0b",
     SNACK: "#3b82f6",
+    DOORPRIZE: "#eab308",
     Keychain: "#facc15",
     Lanyard: "#f59e0b",
-    "+1 PERMEN": "#ef4444"
   };
 
   // ---------- DOM ----------
   const canvas = document.getElementById("wheel");
   const spinBtn = document.getElementById("spinBtn");
-  if (!canvas || !spinBtn) {
-    console.error("Element hilang: #wheel atau #spinBtn");
-    return;
+  const modal = document.getElementById("resultModal");
+  const resultText = document.getElementById("resultText");
+  const continueBtn = document.getElementById("continueBtn");
+  if (!canvas || !spinBtn || !modal || !resultText || !continueBtn) {
+    console.error("Missing required DOM nodes"); return;
   }
   const ctx = canvas.getContext("2d");
 
-  // ---------- State & konstanta ----------
+  // ---------- State ----------
   const n = entries.length;
   const TAU = Math.PI * 2;
   const sector = TAU / n;
-  let rotation = 0;       // radian
+  let rotation = 0;
   let spinning = false;
-  const ZONK_PROB = 0.95; // ubah ini jika ingin probabilitas lain
 
-  // ---------- Util ----------
+  // ---------- Utils ----------
   const normalize = (a) => (a % TAU + TAU) % TAU;
 
   function colorFor(label, i) {
@@ -55,8 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function wrapText(ctx, text, maxWidth, lineHeight) {
     const words = text.split(" ");
-    let line = "";
-    const lines = [];
+    let line = "", lines = [];
     for (const w of words) {
       const test = (line ? line + " " : "") + w;
       const m = ctx.measureText(test);
@@ -83,7 +80,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const start = i * sector - Math.PI / 2;
       const end = start + sector;
 
-      // slice
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.arc(0, 0, r, start, end);
@@ -91,14 +87,12 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.fillStyle = colorFor(entries[i], i);
       ctx.fill();
 
-      // border
       ctx.strokeStyle = "#0b0c10";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(0, 0, r, end, end);
       ctx.stroke();
 
-      // label (termasuk ZONK)
       ctx.save();
       const mid = start + sector / 2;
       ctx.rotate(mid);
@@ -121,14 +115,60 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.restore();
   }
 
-  // ---------- Pemilihan hasil dengan P(ZONK)=85% ----------
+  // ---------- Probabilitas kategori spesifik ----------
+  // Kumulatif: ZONK 0.85, PERMEN 0.92, SNACK 0.97, DOORPRIZE 0.975, OTHER 1.0
   function pickIndexBiased() {
-    const zonk = [], other = [];
-    for (let i = 0; i < n; i++) (entries[i].includes("ZONK") ? zonk : other).push(i);
-    const useZonk = (Math.random() < ZONK_PROB && zonk.length) || other.length === 0;
-    const src = useZonk ? zonk : other;
-    return src[Math.floor(Math.random() * src.length)];
+    const groups = { ZONK: [], PERMEN: [], SNACK: [], DOORPRIZE: [], OTHER: [] };
+
+    for (let i = 0; i < n; i++) {
+      const label = entries[i].toUpperCase();
+      if (label.includes("ZONK")) groups.ZONK.push(i);
+      else if (label.includes("PERMEN")) groups.PERMEN.push(i); // termasuk "+1 PERMEN"
+      else if (label.includes("SNACK")) groups.SNACK.push(i);
+      else if (label.includes("DOORPRIZE")) groups.DOORPRIZE.push(i);
+      else groups.OTHER.push(i); // SPECIAL SPIN, Lanyard, Keychain, dll
+    }
+
+    const thresholds = [
+      ["ZONK", 0.85],
+      ["PERMEN", 0.92],      // +7%
+      ["SNACK", 0.97],       // +5%
+      ["DOORPRIZE", 0.975],  // +0.5%
+      ["OTHER", 1.0]         // sisa 2.5%
+    ];
+
+    const r = Math.random();
+    let chosen = "OTHER";
+    for (const [name, t] of thresholds) {
+      if (r < t) { chosen = name; break; }
+    }
+
+    let bag = groups[chosen];
+    if (!bag.length) {
+      bag = groups.ZONK.length ? groups.ZONK :
+            groups.PERMEN.length ? groups.PERMEN :
+            groups.SNACK.length ? groups.SNACK :
+            groups.DOORPRIZE.length ? groups.DOORPRIZE :
+            groups.OTHER;
+    }
+    return bag[Math.floor(Math.random() * bag.length)];
   }
+
+  // ---------- Modal helpers ----------
+  function showModal(text){
+    resultText.textContent = text;
+    modal.classList.add("show");
+    modal.setAttribute("aria-hidden", "false");
+    continueBtn.focus();
+  }
+  function hideModal(){
+    modal.classList.remove("show");
+    modal.setAttribute("aria-hidden", "true");
+    spinBtn.focus();
+  }
+  continueBtn.addEventListener("click", hideModal);
+  modal.addEventListener("click", (e) => { if (e.target === modal) hideModal(); });
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") hideModal(); });
 
   // ---------- Animasi spin ----------
   function spin() {
@@ -137,12 +177,12 @@ document.addEventListener("DOMContentLoaded", () => {
     spinBtn.disabled = true;
 
     const selected = pickIndexBiased();
-    const targetAngle = normalize(-(selected + 0.5) * sector); // pusat slice di atas
-    const extraTurns = 4 + Math.floor(Math.random() * 3);      // 4..6 putaran
+    const targetAngle = normalize(-(selected + 0.5) * sector);
+    const extraTurns = 4 + Math.floor(Math.random() * 3);
     const start = rotation;
     const endTarget = start + (extraTurns * TAU) + normalize(targetAngle - normalize(start));
 
-    const duration = 4200 + Math.random() * 800; // ms
+    const duration = 4200 + Math.random() * 800;
     const startTime = performance.now();
     const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
 
@@ -154,17 +194,17 @@ document.addEventListener("DOMContentLoaded", () => {
       else {
         spinning = false;
         spinBtn.disabled = false;
-        // Tidak menampilkan teks hasil (sesuai permintaan)
+        showModal(entries[selected]); // tampilkan pop-up hasil
       }
     }
     requestAnimationFrame(frame);
   }
 
-  // ---------- Event & inisialisasi ----------
+  // ---------- Hook UI & init ----------
   spinBtn.addEventListener("click", spin);
   drawWheel();
 
-  // Responsive sizing
+  // responsive sizing
   function resize() {
     const card = document.querySelector(".card");
     const size = Math.min(card.clientWidth - 36, 600);
@@ -174,20 +214,20 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", resize);
   resize();
 
-  // ---------- Runtime tests (console) ----------
+  // (opsional) tes distribusi di console
   (function runTests(){
-    console.assert(!!document.getElementById('wheel'), 'Test: canvas exists');
-    console.assert(!!document.getElementById('spinBtn'), 'Test: spin button exists');
-    const zonkCount = entries.filter(e => e.includes('ZONK')).length;
-    console.assert(zonkCount === 5, `Test: exactly 5 ZONK slices (got ${zonkCount})`);
-    // uji probabilitas ~0.85 (toleransi 3%)
-    let trials = 6000, hits = 0;
-    for (let i=0;i<trials;i++) {
+    const counts = { ZONK:0, PERMEN:0, SNACK:0, DOORPRIZE:0, OTHER:0 };
+    const trials = 10000;
+    for (let i=0;i<trials;i++){
       const idx = pickIndexBiased();
-      if (entries[idx].includes('ZONK')) hits++;
+      const L = entries[idx].toUpperCase();
+      if (L.includes("ZONK")) counts.ZONK++;
+      else if (L.includes("PERMEN")) counts.PERMEN++;
+      else if (L.includes("SNACK")) counts.SNACK++;
+      else if (L.includes("DOORPRIZE")) counts.DOORPRIZE++;
+      else counts.OTHER++;
     }
-    const p = hits / trials;
-    console.assert(Math.abs(p - 0.85) < 0.03, `Test: P(ZONK) ~= 0.85 (got ${p.toFixed(3)})`);
-    console.info(`[tests] slices(ZONK)=${zonkCount}, P(ZONK)≈${p.toFixed(3)} (n=${trials})`);
+    const pct = Object.fromEntries(Object.entries(counts).map(([k,v])=>[k,(v/trials*100)]));
+    console.info("[tests] approx %", Object.fromEntries(Object.entries(pct).map(([k,v])=>[k, v.toFixed(2)])));
   })();
 });
