@@ -1,41 +1,46 @@
 :root{
-  --bg:#0d0f13;
-  --fg:#e7edf5;
-  --card:#151922;
-  --accent:#16a34a;
+  --bg:#0b0f17;
+  --fg:#e8eef8;
+  --muted:#93a3b8;
+  --card:#121826;
+  --accent:#22c55e; /* hijau tombol & pointer */
 }
 
 *{box-sizing:border-box}
 html,body{height:100%}
 body{
   margin:0;
-  background:var(--bg);
+  background:
+    radial-gradient(120% 120% at 50% 0%, #101728 0%, #0b0f17 60%, #0b0f17 100%);
   color:var(--fg);
-  font-family: system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,
-               "Noto Sans","Helvetica Neue",Arial,"Apple Color Emoji","Segoe UI Emoji";
+  font: 500 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
 }
 
 .app{
   min-height:100dvh;
   display:grid;
   place-items:center;
-  gap:16px;
+  gap:22px;
   padding:20px;
 }
 
+/* --- Roda & kanvas ------------------------------------------------------ */
+/* injected: keep canvas square */
 .wheel-wrap{
   position:relative;
-  width:min(90vw,520px);
-  aspect-ratio:1/1;
+  width:min(90vmin, 520px);
+  aspect-ratio:1 / 1; /* pastikan selalu bulat, tidak oval */
   display:grid;
   place-items:center;
   background: radial-gradient(80% 80% at 50% 50%, #1b2130 0%, #0d1017 100%);
   border-radius:24px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.04);
   padding:14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.04);
 }
 
-#wheel{
+.wheel-wrap canvas{
   width:100%;
   height:100%;
   display:block;
@@ -53,6 +58,7 @@ body{
   filter: drop-shadow(0 4px 6px rgba(0,0,0,.5));
 }
 
+/* --- Tombol -------------------------------------------------------------- */
 .btn{
   background:linear-gradient(180deg, #22c55e, #16a34a);
   color:white;
@@ -63,17 +69,19 @@ body{
   cursor:pointer;
   min-width:140px;
   box-shadow:0 10px 20px rgba(22,163,74,.35);
-  transition: transform .06s ease, filter .2s ease;
+  transition: transform .06s ease, filter .2s ease, box-shadow .2s ease;
 }
+.btn:hover{ filter:brightness(1.05); box-shadow:0 14px 26px rgba(22,163,74,.45); }
+.btn:active{ transform:translateY(1px) scale(.99) }
 .btn:disabled{ filter:saturate(.2) brightness(.7); cursor:not-allowed; box-shadow:none; }
-.btn:active{ transform: translateY(1px); }
 
-/* Modal */
+/* --- Modal hasil --------------------------------------------------------- */
 .modal{
   position:fixed; inset:0;
   display:grid; place-items:center;
-  background:rgba(0,0,0,.55);
-  padding:20px;
+  background:rgba(0,0,0,.5);
+  padding:18px;
+  backdrop-filter:saturate(120%) blur(2px);
   z-index:1000;
 }
 .modal[hidden]{ display:none; }
@@ -83,20 +91,13 @@ body{
   width:min(92vw, 420px);
   padding:22px 20px 18px;
   border-radius:16px;
-  box-shadow:0 20px 40px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.05);
   text-align:center;
+  box-shadow:0 20px 40px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.05);
 }
 .modal-card h2{ margin:0 0 6px; font-size:1.25rem; letter-spacing:.3px; }
 .modal-card p{ margin:0 0 16px; font-size:1.25rem; font-weight:800; }
 
-
-/* injected: keep canvas square */
-.wheel-wrap{
-  width:min(90vmin, 520px);
-  aspect-ratio: 1 / 1;
-}
-.wheel-wrap canvas{
-  width:100%;
-  height:100%;
-  border-radius:50%;
+/* --- Responsif kecil ----------------------------------------------------- */
+@media (max-width: 420px){
+  .btn{ min-width:120px; padding:11px 18px; }
 }
