@@ -88,3 +88,15 @@ body{
 }
 .modal-card h2{ margin:0 0 6px; font-size:1.25rem; letter-spacing:.3px; }
 .modal-card p{ margin:0 0 16px; font-size:1.25rem; font-weight:800; }
+
+
+/* injected: keep canvas square */
+.wheel-wrap{
+  width:min(90vmin, 520px);
+  aspect-ratio: 1 / 1;
+}
+.wheel-wrap canvas{
+  width:100%;
+  height:100%;
+  border-radius:50%;
+}
