@@ -2,18 +2,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---- Peluang hasil (bukan dari jumlah slice) ----
   const categories = [
     { name: "ZONK",      weight: 0.75,   color: "#e53935" }, // merah
-    { name: "PERMEN",    weight: 0.15,   color: "#ff69b4" }, // pink
+    { name: "PERMEN",    weight: 0.155,  color: "#ff69b4" }, // pink (15.5%)
     { name: "SNACK",     weight: 0.08,   color: "#1e88e5" }, // biru
-    { name: "KEYCHAIN",  weight: 0.0075, color: "#b39ddb" }, // ungu muda
-    { name: "LANYARD",   weight: 0.0075, color: "#fb8c00" }, // oranye
-    { name: "DOORPRIZE", weight: 0.005,  color: "#d4af37" }, // emas
+    { name: "KEYCHAIN",  weight: 0.0075, color: "#b39ddb" }, // ungu muda (0.75%)
+    { name: "LANYARD",   weight: 0.0075, color: "#fb8c00" }, // oranye (0.75%)
   ];
 
   // Slice visual (18 sektor) — murni estetika
   const SLICE_LABELS = [
     "ZONK","PERMEN","LANYARD","ZONK","SNACK","ZONK",
     "KEYCHAIN","ZONK","PERMEN","ZONK","SNACK","ZONK",
-    "DOORPRIZE","ZONK","SNACK","ZONK","PERMEN","ZONK"
+    "PERMEN","ZONK","SNACK","ZONK","PERMEN","ZONK"
   ];
 
   const colorOf = Object.fromEntries(categories.map(c => [c.name, c.color]));
@@ -77,6 +76,61 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.font = `800 ${size}px system-ui, sans-serif`;
       w = ctx.measureText(text).width;
     }
+
+  // Teks mengikuti lengkung lingkaran (centered di dalam slice)
+  function drawTextAlongArc(ctx, text, radius, startAngle, endAngle, baseSize, color) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    let size = baseSize;
+    // Try shrinking font until text fits in arc (90% of arc length)
+    for (let tries = 0; tries < 12; tries++) {
+      ctx.font = `800 ${size}px system-ui, sans-serif`;
+      // total angle occupied by text
+      let totalAngle = 0;
+      for (const ch of text) {
+        const w = ctx.measureText(ch).width;
+        totalAngle += (w / radius);
+      }
+      const arc = Math.max(0, endAngle - startAngle) * 0.9;
+      if (totalAngle <= arc || totalAngle == 0); // we'll replace 'or' with '||' after writing
+        break
+      size -= 1;
+      if (size < 10) break;
+    }
+
+    // recompute with final size
+    ctx.font = `800 ${size}px system-ui, sans-serif`;
+    let charAngles = [];
+    let totalAngle = 0;
+    for (const ch of text) {
+      const w = ctx.measureText(ch).width;
+      const a = w / radius;
+      charAngles.push(a);
+      totalAngle += a;
+    }
+
+    const arcAvail = endAngle - startAngle;
+    let angle = startAngle + (arcAvail - totalAngle)/2; // center the text in slice
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      const a = charAngles[i] || 0;
+      const mid = angle + a/2;
+
+      ctx.save();
+      // Teks mengikuti lengkung slice
+      const baseSize = Math.max(12, Math.floor(R * 0.12));
+      const fg = textColorFor(color);
+      drawTextAlongArc(ctx, label, rText, a0 + 0.04, a1 - 0.04, baseSize, fg);
+
+      angle += a;
+    }
+    ctx.restore();
+  }
+
     ctx.fillText(text, 0, 0);
   }
 
